@@ -8,5 +8,11 @@
             "email": "info@pointer.ba"
         }
     ],
-    "require": {}
+    "require": {},
+
+    "autoload": {
+        "psr-0": {
+            "PointerBa\\Bundle": "src/"
+        }
+    }
 }
