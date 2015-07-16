@@ -9,10 +9,9 @@
         }
     ],
     "require": {},
-
     "autoload": {
         "psr-4": {
-            "PointerBa\\Bundle": "src/"
+            "PointerBa\\Bundle\\": "src/"
         }
     }
 }
