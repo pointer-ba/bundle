@@ -73,14 +73,14 @@ abstract class Repository {
      *
      * true if cache should be used, false otherwise
      */
-    protected $cache = false;
+    protected $cache = true;
 
     /**
      * @var Builder
      *
      * Eloquent instance for querying
      */
-    protected $model;
+    private $model;
 
     /**
      * @var int | null
@@ -102,6 +102,20 @@ abstract class Repository {
      * optional extra querying for non-custom queries
      */
     private $closure = null;
+
+    /**
+     * @var null
+     *
+     * limit to the number of results
+     */
+    private $limit = null;
+
+    /**
+     * @var null
+     *
+     * Filters for querying
+     */
+    private $filters = [];
 
     /**
      * @var
@@ -145,33 +159,32 @@ abstract class Repository {
     /**
      * global find filter, can be used to apply global rules in derived classes
      */
-    protected function prepare() {}
+    protected function prepare(Builder $model) {}
 
     /**
      * filters only visible instances, can be used to apply global visibility rules in derived classes
      */
-    protected function filterVisible() {}
+    protected function filterVisible(Builder $model) {}
+
+    /**
+     * custom filtering based on $filters array that can be set via setFilter($filters) expected to be implemented in derived classes
+     */
+    protected function filter(Builder $model, array $filters) {}
 
     /**
      * filter sets where the current user's records are taken into account
      */
-    protected function filterAuthored()
+    protected function filterAuthored(Builder $model)
     {
         $user = Auth::user();
 
-        $this->model->where('author_id', '=',  $user ? $user->id : null);
+        $model->where('author_id', '=',  $user ? $user->id : null);
     }
 
     /**
      * method expected to optionally filter for fetching all records in derived class
      */
-    protected function all($limit = null)
-    {
-        if ($limit)
-            $this->model->take($limit);
-
-        $this->model->orderBy('id', 'DESC');
-    }
+    protected function all() {}
 
     /**
      * @param $content
@@ -191,6 +204,7 @@ abstract class Repository {
         File::put($path, '');
     }
 
+
     /**
      * @param $content
      *
@@ -198,6 +212,9 @@ abstract class Repository {
      */
     public function storeToCache($content)
     {
+        if ($content === null)
+            $content = 'null';
+
         if ($this->cache && $this->cacheKey)
         {
             if ($this->cacheTime > 0)
@@ -233,8 +250,10 @@ abstract class Repository {
         {
             $this->cacheKey = ($this->onlyVisible ? '-' : '+')
                 . ($this->onlyAuthored ? '-' : '+')
-                . $this->baseName . ".{$realMethod}[" . serialize($parameters) .  "]" . "<" . implode(',', $this->excludes) .  ">";
+                . "{$realMethod}[" . serialize($parameters) .  "]" . "\{" . serialize($this->filters) . "\}" . "<" . implode(',', $this->excludes) .  ">";
 
+            if ($this->limit)
+                $this->cacheKey .= "|{$this->limit}|";
 
             if ($this->paginate)
                 $this->cacheKey .= 'p=' . (Paginator::resolveCurrentPage() ?: 1) . "&pp=" . $this->perPage;
@@ -243,20 +262,37 @@ abstract class Repository {
                 $this->cacheKey .= "{{$this->keyFragment}}";
 
             if ($cache = Cache::get($this->cacheKey))
-                return $cache;
+            {
+                $this->clearFilters();
+
+                if ($this->appendExcludes)
+                {
+                    $this->excludes += $cache->lists($this->identifier)->all();
+
+                    $this->appendExcludes = false;
+                }
+
+                return $cache === 'null' ? null : $cache;
+            }
         }
 
         $this->model = (new $this->modelClass);
 
-        $this->model = $this->model->whereNotIn($this->model->getTable() . '.' . $this->identifier(), $this->excludes);
+        $this->model = $this->model->whereNotIn($this->model->getTable() . '.' . $this->identifier, $this->excludes);
 
-        $this->prepare();
+        $this->prepare($this->model);
+        $this->filter($this->model, $this->filters);
 
         if ($this->onlyVisible)
-            $this->filterVisible();
+            $this->filterVisible($this->model);
 
         if ($this->onlyAuthored)
-            $this->filterAuthored();
+            $this->filterAuthored($this->model);
+
+        if ($this->limit)
+            $this->model->take($this->limit);
+
+        array_unshift($parameters, $this->model);
 
         call_user_func_array(array($this, $realMethod), $parameters);
 
@@ -275,6 +311,8 @@ abstract class Repository {
 
             $this->appendExcludes = false;
         }
+
+        $this->clearFilters();
 
         return $result;
     }
@@ -325,15 +363,23 @@ abstract class Repository {
                 . "{$this->baseName}.find[{$id}]";
 
             if ($cache = Cache::get($this->cacheKey))
-                return $cache;
+            {
+                $this->clearFilters();
+                return $cache === 'null' ? null : $cache;
+            }
         }
 
         $this->model = (new $this->modelClass)->where(DB::raw(1), '=', 1);
 
-        $this->prepare();
+        $this->prepare($this->model);
 
         if ($this->onlyVisible)
-            $this->filterVisible();
+            $this->filterVisible($this->model);
+
+        if ($this->onlyAuthored)
+            $this->filterAuthored($this->model);
+
+        $this->filter($this->model, $this->filters);
 
         $this->model->where($this->identifier, '=', $id);
 
@@ -341,6 +387,8 @@ abstract class Repository {
             : $this->model->first();
 
         $this->storeToCache($result);
+
+        $this->clearFilters();
 
         return $result;
     }
@@ -365,14 +413,12 @@ abstract class Repository {
      */
     public function customFind(Closure $closure, $cacheKey = null, $orFail = false)
     {
-        $this->cacheKey = $cacheKey;
-
-        if ($this->cacheKey && $this->cache)
+        if ($this->cache)
         {
-            $this->cacheKey = $this->baseName . ".[{$this->cacheKey}]";
+            $this->cacheKey = "~[{$cacheKey}]";
 
             if ($cache = Cache::get($this->cacheKey))
-                return $cache;
+                return $cache === 'null' ? null : $cache;
         }
 
         $this->model = (new $this->modelClass)->where(DB::raw(1), '=', 1);
@@ -411,13 +457,13 @@ abstract class Repository {
 
         if ($this->cacheKey && $this->cache)
         {
-            $this->cacheKey = $this->baseName . ".[{$this->cacheKey}]";
+            $this->cacheKey = "~[{$this->cacheKey}]";
 
             if ($this->paginate)
                 $this->cacheKey .= 'p=' . (Paginator::resolveCurrentPage() ?: 1) . "&pp=" . $this->perPage;
 
             if ($cache = Cache::get($this->cacheKey))
-                return $cache;
+                return $cache === 'null' ? null : $cache;
         }
 
         $this->model = (new $this->modelClass)->where(DB::raw(1), '=', 1);
@@ -429,6 +475,48 @@ abstract class Repository {
         $this->storeToCache($result);
 
         return $result;
+    }
+
+    /**
+     * @param $limit
+     *
+     * Sets the limit for result set
+     */
+    public function limit($limit)
+    {
+        $this->limit = $limit;
+
+        return $this;
+    }
+
+    /**
+     * Clears the limit for the result set
+     */
+    public function clearLimit()
+    {
+        $this->limit = null;
+    }
+
+    /**
+     * @param array $filters
+     *
+     * Sets the filters for querying
+     */
+    public function filters(array $filters = [])
+    {
+        $this->filters = $filters;
+
+        return $this;
+    }
+
+    /**
+     * Clears all filters
+     */
+    public function clearFilters()
+    {
+        $this->filters = [];
+
+        return $this;
     }
 
     /**
