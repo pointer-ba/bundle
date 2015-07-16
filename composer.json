@@ -1,0 +1,12 @@
+{
+    "name": "pointer-ba/bundle",
+    "description": "Our common classes / traits for dev",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Namik Mesic",
+            "email": "info@pointer.ba"
+        }
+    ],
+    "require": {}
+}
