@@ -73,7 +73,7 @@ abstract class Repository {
      *
      * true if cache should be used, false otherwise
      */
-    protected $cache = true;
+    protected $cache = false;
 
     /**
      * @var Builder
@@ -250,7 +250,8 @@ abstract class Repository {
         {
             $this->cacheKey = ($this->onlyVisible ? '-' : '+')
                 . ($this->onlyAuthored ? '-' : '+')
-                . "{$realMethod}[" . serialize($parameters) .  "]" . "\{" . serialize($this->filters) . "\}" . "<" . implode(',', $this->excludes) .  ">";
+                . $this->baseName
+                . ".{$realMethod}[" . serialize($parameters) .  "]" . "\{" . serialize($this->filters) . "\}" . "<" . implode(',', $this->excludes) .  ">";
 
             if ($this->limit)
                 $this->cacheKey .= "|{$this->limit}|";
