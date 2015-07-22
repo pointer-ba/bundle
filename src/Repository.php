@@ -279,7 +279,11 @@ abstract class Repository {
 
         $this->model = (new $this->modelClass);
 
-        $this->model = $this->model->whereNotIn($this->model->getTable() . '.' . $this->identifier, $this->excludes);
+        $table = $this->model->getTable();
+
+        $this->model = $this->model->newQuery();
+
+        $this->model = $this->model->whereNotIn($table . '.' . $this->identifier, $this->excludes);
 
         $this->prepare($this->model);
         $this->filter($this->model, $this->filters);
@@ -370,7 +374,7 @@ abstract class Repository {
             }
         }
 
-        $this->model = (new $this->modelClass);
+        $this->model = (new $this->modelClass)->newQuery();
 
         $this->prepare($this->model);
 
@@ -422,7 +426,7 @@ abstract class Repository {
                 return $cache === 'null' ? null : $cache;
         }
 
-        $this->model = (new $this->modelClass);
+        $this->model = (new $this->modelClass)->newQuery();
 
         $closure($this->model);
 
@@ -467,7 +471,7 @@ abstract class Repository {
                 return $cache === 'null' ? null : $cache;
         }
 
-        $this->model = (new $this->modelClass);
+        $this->model = (new $this->modelClass)->newQuery();
 
         $closure($this->model);
 
@@ -733,8 +737,7 @@ abstract class Repository {
 
         else
         {
-            $this->model = (new $this->modelClass)
-                ->where('id', '=', $id);
+            $this->model = (new $this->modelClass)->newQuery();
 
             $this->model->first();
 
