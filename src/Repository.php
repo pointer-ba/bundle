@@ -370,7 +370,7 @@ abstract class Repository {
             }
         }
 
-        $this->model = (new $this->modelClass)->where(DB::raw(1), '=', 1);
+        $this->model = (new $this->modelClass);
 
         $this->prepare($this->model);
 
@@ -422,7 +422,7 @@ abstract class Repository {
                 return $cache === 'null' ? null : $cache;
         }
 
-        $this->model = (new $this->modelClass)->where(DB::raw(1), '=', 1);
+        $this->model = (new $this->modelClass);
 
         $closure($this->model);
 
@@ -467,7 +467,7 @@ abstract class Repository {
                 return $cache === 'null' ? null : $cache;
         }
 
-        $this->model = (new $this->modelClass)->where(DB::raw(1), '=', 1);
+        $this->model = (new $this->modelClass);
 
         $closure($this->model);
 
