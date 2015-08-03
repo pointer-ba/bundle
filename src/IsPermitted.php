@@ -1,6 +1,6 @@
 <?php
 
-namespace PointerBa\Bundle\IsPermitted;
+namespace PointerBa\Bundle;
 
 use Closure;
 use Illuminate\Contracts\Auth\Guard;
