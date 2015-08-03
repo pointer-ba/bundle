@@ -319,6 +319,8 @@ abstract class Repository {
 
         $this->clearFilters();
 
+        $this->limit = null;
+
         return $result;
     }
 
