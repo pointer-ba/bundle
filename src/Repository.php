@@ -319,8 +319,6 @@ abstract class Repository {
 
         $this->clearFilters();
 
-        $this->limit = null;
-
         return $result;
     }
 
@@ -376,7 +374,11 @@ abstract class Repository {
             }
         }
 
-        $this->model = (new $this->modelClass)->newQuery();
+        $this->model = (new $this->modelClass);
+
+        $table = $this->model->getTable();
+
+        $this->model = $this->model->newQuery();
 
         $this->prepare($this->model);
 
@@ -388,7 +390,8 @@ abstract class Repository {
 
         $this->filter($this->model, $this->filters);
 
-        $this->model->where($this->identifier, '=', $id);
+
+        $this->model->where($table . '.' . $this->identifier, '=', $id);
 
         $result = $orFail ? $this->model->firstOrFail()
             : $this->model->first();
