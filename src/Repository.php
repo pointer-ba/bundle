@@ -204,7 +204,6 @@ abstract class Repository {
         File::put($path, '');
     }
 
-
     /**
      * @param $content
      *
@@ -374,11 +373,7 @@ abstract class Repository {
             }
         }
 
-        $this->model = (new $this->modelClass);
-
-        $table = $this->model->getTable();
-
-        $this->model = $this->model->newQuery();
+        $this->model = (new $this->modelClass)->newQuery();
 
         $this->prepare($this->model);
 
@@ -390,8 +385,7 @@ abstract class Repository {
 
         $this->filter($this->model, $this->filters);
 
-
-        $this->model->where($table . '.' . $this->identifier, '=', $id);
+        $this->model->where($this->identifier, '=', $id);
 
         $result = $orFail ? $this->model->firstOrFail()
             : $this->model->first();
@@ -692,6 +686,11 @@ abstract class Repository {
         return $this->excludes;
     }
 
+    public function extractData($request)
+    {
+        return $request->only($this->model->getFillable());
+    }
+
     /**
      * @return array
      *
@@ -714,7 +713,15 @@ abstract class Repository {
     {
         $class = $this->modelClass;
 
-        return $class::create($data + $this->createDefaults());
+        $this->model = new $class;
+
+        if (!is_array($data))
+            $data = $this->extractData($data);
+
+        $this->model->fill($data + $this->createDefaults())
+            ->save();
+
+        return $this->model;
     }
 
     /**
@@ -742,16 +749,22 @@ abstract class Repository {
 
         else
         {
-            $this->model = (new $this->modelClass)->newQuery();
+            $this->model = (new $this->modelClass);
+            $table = $this->model->getTable();
+            $this->model = $this->model->newQuery();
 
-            $this->model->first();
+            $this->model->where($table . '.' . $this->identifier, '=', $id);
 
-            $this->model = $orFail ? $this->model->firstOrFail()
+            $this->model = $orFail
+                ? $this->model->firstOrFail()
                 : $this->model->first();
 
             if (!$this->model)
                 return false;
         }
+
+        if (!is_array($data))
+            $data = $this->extractData($data);
 
         $this->model->fill($data + $this->updateDefaults())
             ->save();
