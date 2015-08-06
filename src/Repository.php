@@ -12,12 +12,18 @@ use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
-abstract class Repository {
-
+/**
+ * Class Repository
+ * @package PointerBa\Bundle
+ *
+ * @method Collection getAll()
+ */
+abstract class Repository
+{
     /**
      * folder where all repo keys are stored
      */
-    const BASE_KEY_STORE_PATH = '../storage/repositories/';
+    const KEY_STORE_PATH = '../storage/repositories/';
 
     /**
      * @var bool
@@ -152,26 +158,35 @@ abstract class Repository {
     {
         $this->baseName = class_basename($this);
 
-        $this->keyStorePath = static::BASE_KEY_STORE_PATH . $this->baseName;
+        $this->keyStorePath = static::KEY_STORE_PATH . $this->baseName;
     }
 
 
     /**
+     * @param Builder $model
+     *
      * global find filter, can be used to apply global rules in derived classes
      */
     protected function prepare(Builder $model) {}
 
     /**
+     * @param Builder $model
+     *
      * filters only visible instances, can be used to apply global visibility rules in derived classes
      */
     protected function filterVisible(Builder $model) {}
 
     /**
+     * @param Builder $model
+     * @param array $filters
+     *
      * custom filtering based on $filters array that can be set via setFilter($filters) expected to be implemented in derived classes
      */
     protected function filter(Builder $model, array $filters) {}
 
     /**
+     * @param Builder $model
+     *
      * filter sets where the current user's records are taken into account
      */
     protected function filterAuthored(Builder $model)
@@ -187,13 +202,11 @@ abstract class Repository {
     protected function all() {}
 
     /**
-     * @param $content
-     *
      * stores into cache if the Repository::$cache is set to true
      */
     public static function clearCache()
     {
-        $path = static::BASE_KEY_STORE_PATH . class_basename(get_called_class());
+        $path = static::KEY_STORE_PATH . class_basename(get_called_class());
 
         if (!File::exists($path))
             return;
@@ -232,8 +245,9 @@ abstract class Repository {
 
     /**
      * @param $method
-     * @param $params
+     * @param $parameters
      * @return Collection
+     * @throws \Exception
      *
      * sets cache key if derived class method call
      * derived classes methods (like 'featured') are to be used as 'getFeatured'
@@ -322,7 +336,7 @@ abstract class Repository {
     }
 
     /**
-     * @param callable $closure
+     * @param Closure $closure
      * @param $keyFragment
      * @return $this
      *
@@ -408,7 +422,7 @@ abstract class Repository {
     }
 
     /**
-     * @param callable $closure
+     * @param Closure $closure
      * @param null $cacheKey
      * @param bool $orFail
      * @return mixed
@@ -437,7 +451,7 @@ abstract class Repository {
     }
 
     /**
-     * @param callable $closure
+     * @param Closure $closure
      * @param null $cacheKey
      * @return mixed
      *
@@ -449,9 +463,10 @@ abstract class Repository {
     }
 
     /**
-     * @param callable $closure
+     * @param Closure $closure
      * @param null $cacheKey
-     * @return mixed
+     * @return Collection|null|static[]
+     *
      *
      * allows for custom repository querying with optional caching
      */
@@ -483,6 +498,7 @@ abstract class Repository {
 
     /**
      * @param $limit
+     * @return $this
      *
      * Sets the limit for result set
      */
@@ -503,6 +519,7 @@ abstract class Repository {
 
     /**
      * @param array $filters
+     * @return $this
      *
      * Sets the filters for querying
      */
@@ -524,8 +541,8 @@ abstract class Repository {
     }
 
     /**
-     * @param $paginate
-     * @return mixed
+     * @param bool|true $paginate
+     * @return $this
      *
      * sets whether results should be paginated or not
      */
@@ -537,7 +554,7 @@ abstract class Repository {
     }
 
     /**
-     * @param null $paginate
+     * @param null $identifier
      * @return $this|null
      *
      * sets or gets the identifier for finding a record
@@ -555,8 +572,8 @@ abstract class Repository {
     }
 
     /**
-     * @param $cache
-     *
+     * @param null $cache
+     * @return $this|bool
      * sets or gets if cache should be used
      */
     public function cache($cache = null)
@@ -590,7 +607,7 @@ abstract class Repository {
     }
 
     /**
-     * @param null $onlyVisible
+     * @param null $onlyAuthored
      * @return $this|bool
      *
      * sets or gets if only visible records should be returned
@@ -609,6 +626,7 @@ abstract class Repository {
 
     /**
      * @param $perPage
+     * @return $this|int
      *
      * set maximum amount of items per page
      */
@@ -626,6 +644,7 @@ abstract class Repository {
 
     /**
      * @param $cacheTime
+     * @return $this|int|null
      *
      * set or get maximum cache time
      */
@@ -642,7 +661,7 @@ abstract class Repository {
     }
 
     /**
-     * @param null $appendExcludes
+     * @param bool|true $appendExcludes
      * @return $this
      *
      * sets whether the result identifiers should be appended to future excludes
@@ -656,6 +675,7 @@ abstract class Repository {
 
     /**
      * @param array $excludes
+     * @return $this
      *
      * adds to the array of identifier exclusions
      */
@@ -718,8 +738,12 @@ abstract class Repository {
         if (!is_array($data))
             $data = $this->extractData($data);
 
-        $this->model->fill($data + $this->createDefaults())
-            ->save();
+        $this->model->fill($data);
+
+        foreach ($this->createDefaults() as $key => $value)
+            $this->model->$key = $value;
+
+        $this->model->save();
 
         return $this->model;
     }
@@ -766,8 +790,12 @@ abstract class Repository {
         if (!is_array($data))
             $data = $this->extractData($data);
 
-        $this->model->fill($data + $this->updateDefaults())
-            ->save();
+        $this->model->fill($data);
+
+        foreach ($this->updateDefaults() as $key => $value)
+            $this->model->$key = $value;
+
+        $this->model->save();
 
         return $this->model;
     }
@@ -792,9 +820,11 @@ abstract class Repository {
      */
     public function destroy($id)
     {
+        if ($id instanceof Model)
+         return $id->delete();
+
         $class = $this->modelClass;
 
         return $class::destroy($id);
     }
-
 }

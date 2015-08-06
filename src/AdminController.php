@@ -2,20 +2,25 @@
 
 namespace PointerBa\Bundle;
 
-use App\Http\Controllers\Controller;
-use App\Repositories\Repository;
-use Illuminate\Support\Facades\Auth;
 use App\User;
-use Illuminate\Support\Facades\View;
+use Illuminate\Foundation\Bus\DispatchesJobs;
+use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Routing\Controller;
 
-abstract class AdminController extends Controller {
+/**
+ * Class AdminController
+ * @package PointerBa\Bundle
+ */
+abstract class AdminController extends Controller
+{
+    use DispatchesJobs;
+    use ValidatesRequests;
 
     /**
      * @var User
      *
      * currently active user
      */
-
     protected $user;
 
     /**
@@ -23,7 +28,6 @@ abstract class AdminController extends Controller {
      *
      * sets if a repo should be used
      */
-
     protected $noRepo = false;
 
     /**
@@ -31,25 +35,22 @@ abstract class AdminController extends Controller {
      *
      * repo class name
      */
-
     protected $repoClassName = null;
 
     /**
-     * @var Repository|null
+     * @var Repository
      *
      * derived class repository, null if does not exist
      */
-
-    protected $repo = null;
+    protected $repo;
 
     /**
      * Sets local values
      */
-
     public function __construct ()
     {
-        $this->user = Auth::user();
-        View::share('currentUser', $this->user ?: new User);
+        $this->user = \Auth::user();
+        \View::share('currentUser', $this->user ?: new User);
 
         if (!$this->noRepo)
         {
