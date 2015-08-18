@@ -197,9 +197,11 @@ abstract class Repository
     }
 
     /**
+     * @param Builder $model
+     *
      * method expected to optionally filter for fetching all records in derived class
      */
-    protected function all() {}
+    protected function all(Builder $model) {}
 
     /**
      * stores into cache if the Repository::$cache is set to true

@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 trait PublishableTrait {
 
     public static $IS_PUBLISHED = [
-        1 => 'Da',
-        0 => 'Ne'
+        0 => 'Ne',
+        1 => 'Da'
     ];
 
     /**
