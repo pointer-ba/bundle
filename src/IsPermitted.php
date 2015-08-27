@@ -1,32 +1,22 @@
 <?php
 
-namespace PointerBa\Bundle;
+ namespace App\PointerBa\Bundle;
 
 use Closure;
-use Illuminate\Contracts\Auth\Guard;
-use Illuminate\Support\Facades\Route;
 
-class IsPermitted {
-
-    protected $auth;
-
-    public function __construct(Guard $auth)
-    {
-        $this->auth = $auth;
-    }
-    
+class IsPermitted
+{
     protected function failed ($request)
     {
-        return $request->ajax() ? response('Unauthorized.', 401)
-                                : redirect()->guest('auth/login');
+        return $request->ajax() 
+            ? response('Unauthorized.', 401)
+            : redirect()->guest('auth/login');
     }
 
     public function handle($request, Closure $next)
     {
-        if ($this->auth->guest())
+        if (!$user = \Auth::user())
             return $this->failed($request);
-
-        $user = $this->auth->user();
 
         $routeName = $request->route()->getUri();
         $routePieces = explode('/', $routeName);
@@ -39,10 +29,8 @@ class IsPermitted {
 
         $permissionSet[] = $finalPermission;
 
-        if (!$user->can($permissionSet))
-            return $this->failed($request);
-
-        return $next($request);
+        return $user->can($permissionSet)
+            ? $next($request);
+            : $this->failed($request);
     }
-
 }
