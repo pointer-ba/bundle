@@ -30,7 +30,7 @@ class IsPermitted
         $permissionSet[] = $finalPermission;
 
         return $user->can($permissionSet)
-            ? $next($request);
+            ? $next($request)
             : $this->failed($request);
     }
 }
