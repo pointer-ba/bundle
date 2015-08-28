@@ -1,12 +1,12 @@
 <?php
 
- namespace App\PointerBa\Bundle;
+ namespace PointerBa\Bundle;
 
 use Closure;
 
 class IsPermitted
 {
-    protected function failed ($request)
+    protected function failed($request)
     {
         return $request->ajax() 
             ? response('Unauthorized.', 401)
