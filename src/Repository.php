@@ -79,7 +79,7 @@ abstract class Repository
      *
      * true if cache should be used, false otherwise
      */
-    protected $cache = false;
+    protected $cache = true;
 
     /**
      * @var Builder
@@ -547,6 +547,16 @@ abstract class Repository
     }
 
     /**
+     * Clears all excludes
+     */
+    public function clearExcludes()
+    {
+        $this->excludes = [];
+
+        return $this;
+    }
+
+    /**
      * @param bool|true $paginate
      * @return $this
      *
@@ -827,7 +837,7 @@ abstract class Repository
     public function destroy($id)
     {
         if ($id instanceof Model)
-         return $id->delete();
+            return $id->delete();
 
         $class = $this->modelClass;
 
