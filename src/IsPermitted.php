@@ -1,6 +1,6 @@
 <?php
 
- namespace PointerBa\Bundle;
+namespace PointerBa\Bundle;
 
 use Closure;
 
