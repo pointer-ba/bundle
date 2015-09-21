@@ -283,7 +283,7 @@ abstract class Repository
 
                 if ($this->appendExcludes)
                 {
-                    $this->excludes += $cache->lists($this->identifier)->all();
+                    $this->excludes = array_merge($this->excludes, $cache->lists($this->identifier)->all());
 
                     $this->appendExcludes = false;
                 }
@@ -297,6 +297,8 @@ abstract class Repository
         $table = $this->model->getTable();
 
         $this->model = $this->model->newQuery();
+
+        $this->model->select("{$table}.*");
 
         $this->model = $this->model->whereNotIn($table . '.' . $this->identifier, $this->excludes);
 
@@ -327,7 +329,7 @@ abstract class Repository
 
         if ($this->appendExcludes)
         {
-            $this->excludes += $result->lists($this->identifier)->all();
+            $this->excludes = array_merge($this->excludes, $result->lists($this->identifier)->all());
 
             $this->appendExcludes = false;
         }
@@ -394,6 +396,8 @@ abstract class Repository
         $table = $this->model->getTable();
 
         $this->model = $this->model->newQuery();
+
+        $this->model->select("{$table}.*");
 
         $this->prepare($this->model);
 
